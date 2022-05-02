@@ -47,20 +47,23 @@ app.get("/urls/new", (req, res) => {
 
 app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
-  console.log(shortURL);
   const longURL = urlDatabase[shortURL];
-  console.log(longURL);
 
   const templateVars = { shortURL,longURL};
   res.render("urls_show", templateVars);
+ 
 });
+
+app.get("/u/:shortURL", (req, res) => {
+  const shortURL = req.params.shortURL;
+  const longURL = urlDatabase[shortURL];
+  res.redirect(longURL);
+});
+
 app.post("/urls", (req, res) => {
   const key = generateRandomString();
   urlDatabase[key] = req.body.longURL;
- 
-
-  // console.log(urlDatabase);
-  res.send(key);         // Respond with 'Ok' (we will replace this)
+   res.redirect(`urls/${key}`);         // Respond with 'Ok' (we will replace this)
 });
 
 
