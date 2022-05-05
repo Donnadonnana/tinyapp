@@ -66,7 +66,7 @@ app.get("/urls/new", (req, res) => {
   res.render("urls_new",templateVars);
 });
 
-//
+
 app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
   const longURL = urlDatabase[shortURL];
@@ -84,7 +84,8 @@ app.get("/u/:shortURL", (req, res) => {
   res.redirect(longURL);
 });
 
-//user register an account
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+// user register an account
 app.get("/register", (req, res) => {
   const username = req.cookies.username;
   const templateVars = {username};
@@ -92,9 +93,28 @@ app.get("/register", (req, res) => {
   res.render("register",templateVars);
 });
 
-//add a new user
-app.post("/register", (req,res) => {
-  const newUser = generateRandomString();
+//register a new user
+app.post("/register", (req, res) => {
+  if (req.body.email) {
+    let alreadyExists = false;
+    Object.keys(users).forEach((key) => {
+      const currentUser = users[key]
+      const currentUserEmail = currentUser.email;
+      if (req.body.email === currentUserEmail) {
+        alreadyExists = true;
+      }
+    })
+    if (alreadyExists) {
+      res.status(400);
+      res.send('User already exists')
+      return;
+    }
+  }
+  if (req.body.email === '' || req.body.password === '') {
+    res.status(400);
+    res.send('status: ' + res.statusCode);
+  } else {
+    const newUser = generateRandomString();
   users[newUser] = {
     id: newUser,
     email: req.body.email,
@@ -103,7 +123,10 @@ app.post("/register", (req,res) => {
   const username = newUser;
   res.cookie('user_id', username);
   res.redirect('/urls');
+  }
 })
+
+
 
 //add a new url
 app.post("/urls", (req, res) => {
@@ -112,12 +135,14 @@ app.post("/urls", (req, res) => {
    res.redirect(`urls/${key}`);        
 });
 
+//Delete a url
 app.post("/urls/:shortURL/delete", (req, res) => {
   const shortURL = req.params.shortURL;
   delete urlDatabase[shortURL];
    res.redirect('/urls');
 })
 
+//edit a url
 app.post("/urls/:shortURL/edit", (req, res) => {
   const shortURL = req.params.shortURL;
   
@@ -128,12 +153,15 @@ app.post("/urls/:shortURL/edit", (req, res) => {
    res.redirect('/urls');
 })
 
+//login to a account
 app.post("/login", (req, res) => {
   const username = req.body.username;
   res.cookie('username', username);
   res.redirect('/urls')
 })
 
+
+//logout the account
 app.post("/logout", (req, res) => {
   const username = req.body.username;
   res.clearCookie('username', username);
