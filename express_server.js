@@ -54,25 +54,37 @@ app.get("/hello", (req, res) => {
 
 //Main Page, user login
 app.get("/urls", (req, res) => {
-  const username = req.cookies.username;
-  const templateVars = { urls: urlDatabase, username: username || null };
+  const loggedInUserCookie = req.cookies.user_id
+
+  const templateVars = {
+    urls: urlDatabase,
+    email: users[loggedInUserCookie]?.email,
+  };
   res.render("urls_index", templateVars);
 });
 
 //Create a new url
 app.get("/urls/new", (req, res) => {
-  const username = req.cookies.username;
-  const templateVars = {username};
-  res.render("urls_new",templateVars);
+ const loggedInUserCookie = req.cookies.user_id
+
+  const templateVars = {
+    email: users[loggedInUserCookie]?.email,
+  };
+  res.render("urls_new", templateVars);
 });
 
-//
+
 app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
   const longURL = urlDatabase[shortURL];
-  const username = req.cookies.username;
+ 
+  const loggedInUserCookie = req.cookies.user_id;
 
-  const templateVars = { shortURL,longURL, username};
+  const templateVars = {
+    longURL,
+    shortURL,
+    email: users[loggedInUserCookie]?.email,
+  };
   res.render("urls_show", templateVars);
  
 });
@@ -84,26 +96,61 @@ app.get("/u/:shortURL", (req, res) => {
   res.redirect(longURL);
 });
 
-//user register an account
+
+// user register an account
 app.get("/register", (req, res) => {
-  const username = req.cookies.username;
-  const templateVars = {username};
-  console.log('aaaaaaaa');
-  res.render("register",templateVars);
+ const loggedInUserCookie = req.cookies.user_id;
+
+  const templateVars = {
+    email: users[loggedInUserCookie]?.email,
+  };
+  res.render("register", templateVars);
 });
 
-//add a new user
-app.post("/register", (req,res) => {
-  const newUser = generateRandomString();
+//User LOGIN page
+app.get("/login", (req, res) => {
+ const loggedInUserCookie = req.cookies.user_id;
+
+  const templateVars = {
+ 
+    email: users[loggedInUserCookie]?.email,
+  };
+  res.render("login", templateVars);
+});
+
+//register a new user
+app.post("/register", (req, res) => {
+  if (req.body.email) {
+    let alreadyExists = false;
+    Object.keys(users).forEach((key) => {
+      const currentUser = users[key]
+      const currentUserEmail = currentUser.email;
+      if (req.body.email === currentUserEmail) {
+        alreadyExists = true;
+      }
+    })
+    if (alreadyExists) {
+      res.status(400);
+      res.send('User already exists')
+      return;
+    }
+  }
+  if (req.body.email === '' || req.body.password === '') {
+    res.status(400);
+    res.send('status: ' + res.statusCode);
+  } else {
+    const newUser = generateRandomString();
   users[newUser] = {
     id: newUser,
     email: req.body.email,
     password:req.body.password
   }
-  const username = newUser;
-  res.cookie('user_id', username);
+  res.cookie('user_id', newUser);
   res.redirect('/urls');
+  }
 })
+
+
 
 //add a new url
 app.post("/urls", (req, res) => {
@@ -112,12 +159,14 @@ app.post("/urls", (req, res) => {
    res.redirect(`urls/${key}`);        
 });
 
+//Delete a url
 app.post("/urls/:shortURL/delete", (req, res) => {
   const shortURL = req.params.shortURL;
   delete urlDatabase[shortURL];
    res.redirect('/urls');
 })
 
+//edit a url
 app.post("/urls/:shortURL/edit", (req, res) => {
   const shortURL = req.params.shortURL;
   
@@ -128,15 +177,34 @@ app.post("/urls/:shortURL/edit", (req, res) => {
    res.redirect('/urls');
 })
 
+//login to a account
 app.post("/login", (req, res) => {
-  const username = req.body.username;
-  res.cookie('username', username);
-  res.redirect('/urls')
+  let matchedUser = null;
+  Object.keys(users).forEach((key) => {
+    const currentUser = users[key];
+    const currentUserEmail = currentUser.email;
+    const currentUserPassword = currentUser.password;
+    if (req.body.email === currentUserEmail) {
+      if (req.body.password === currentUserPassword) {
+        matchedUser = currentUser;
+      }
+    }
+  })
+
+  if (matchedUser !== null) {
+    res.cookie('user_id', matchedUser.id);
+    res.redirect('/urls');  
+  } else {
+    res.status(403);
+    res.send('wrong email or wrong password');
+  }
+  
 })
 
+
+//logout the account
 app.post("/logout", (req, res) => {
-  const username = req.body.username;
-  res.clearCookie('username', username);
+  res.clearCookie('user_id');
   res.redirect('/urls')
 })
 
