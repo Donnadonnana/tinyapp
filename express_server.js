@@ -15,8 +15,14 @@ const generateRandomString=() => {
 }
 
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  b6UTxQ: {
+        longURL: "https://www.tsn.ca",
+        userID: "aJ48lW"
+    },
+    i3BoGr: {
+        longURL: "https://www.google.ca",
+        userID: "aJ48lW"
+    }
 };
 
 const users = {
@@ -55,9 +61,19 @@ app.get("/hello", (req, res) => {
 //Main Page, user login
 app.get("/urls", (req, res) => {
   const loggedInUserCookie = req.cookies.user_id
+  const dataKeys = Object.keys(urlDatabase);
+  const urlsData = dataKeys.map((key) => {
+    return {
+      shortURL: key,
+      longURL: urlDatabase[key].longURL,
+      userID: urlDatabase[key].userID,
+    }
+  })
+
+  console.log(urlsData);
 
   const templateVars = {
-    urls: urlDatabase,
+    urlsData: urlsData,
     email: users[loggedInUserCookie]?.email,
   };
   res.render("urls_index", templateVars);
@@ -66,7 +82,9 @@ app.get("/urls", (req, res) => {
 //Create a new url
 app.get("/urls/new", (req, res) => {
  const loggedInUserCookie = req.cookies.user_id
-
+  if (!loggedInUserCookie) {
+    res.redirect('/login');
+}
   const templateVars = {
     email: users[loggedInUserCookie]?.email,
   };
@@ -77,6 +95,7 @@ app.get("/urls/new", (req, res) => {
 app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
   const longURL = urlDatabase[shortURL];
+  
  
   const loggedInUserCookie = req.cookies.user_id;
 
@@ -99,7 +118,10 @@ app.get("/u/:shortURL", (req, res) => {
 
 // user register an account
 app.get("/register", (req, res) => {
- const loggedInUserCookie = req.cookies.user_id;
+  const loggedInUserCookie = req.cookies.user_id;
+  if (loggedInUserCookie) {
+    res.redirect('/urls');
+  }
 
   const templateVars = {
     email: users[loggedInUserCookie]?.email,
@@ -115,6 +137,9 @@ app.get("/login", (req, res) => {
  
     email: users[loggedInUserCookie]?.email,
   };
+  if (loggedInUserCookie) {
+    res.redirect('/urls')
+  }
   res.render("login", templateVars);
 });
 
@@ -154,6 +179,11 @@ app.post("/register", (req, res) => {
 
 //add a new url
 app.post("/urls", (req, res) => {
+   const loggedInUserCookie = req.cookies.user_id;
+  if (!loggedInUserCookie) {
+    res.status(500);
+    res.send('You must be logged in to make a new url');
+  }
   const key = generateRandomString();
   urlDatabase[key] = req.body.longURL;
    res.redirect(`urls/${key}`);        
