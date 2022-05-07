@@ -27,14 +27,15 @@
         </tr>
       </thead>
       <tbody>
-        <% for(let url in urls) { %>
+        <% for(let url of urlsData) { %>
           <tr>
             <td>
-              <%= url %>
+              <%= url.shortURL %>
               
             </td>
+            
             <td>
-              <%= urls[url] %>
+              <%= url.longURL %>
             </td>
             <td>
               <a href="/urls/<%= url %>"><button type="button" class="btn btn-outline-primary">Edit</button></a>
