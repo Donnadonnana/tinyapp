@@ -42,9 +42,18 @@ const users = {
 };
 
 const bodyParser = require("body-parser");
-const cookieParser = require("cookie-parser");
+
+const cookieSession = require('cookie-session');
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(cookieParser());
+
+
+app.use(cookieSession({
+  name: 'session',
+  keys: ['key'],
+
+  // Cookie Options
+  maxAge: 24 * 60 * 60 * 1000 // 24 hours
+}))
 
 
 //Localhost:8080/
@@ -63,7 +72,7 @@ app.get("/hello", (req, res) => {
 
 //Main Page, user login
 app.get("/urls", (req, res) => {
-  const loggedInUserCookie = req.cookies.user_id
+  const loggedInUserCookie = req.session.user_id
   if (!loggedInUserCookie) {
     return res.redirect('/login');
   }
@@ -90,7 +99,7 @@ app.get("/urls", (req, res) => {
 
 //Create a new url
 app.get("/urls/new", (req, res) => {
- const loggedInUserCookie = req.cookies.user_id
+ const loggedInUserCookie = req.session.user_id
   if (!loggedInUserCookie) {
     return res.redirect('/login');
   }
@@ -106,7 +115,7 @@ app.get("/urls/:shortURL", (req, res) => {
   const longURL = urlDatabase[shortURL].longURL;
   
  
-  const loggedInUserCookie = req.cookies.user_id;
+  const loggedInUserCookie = req.session.user_id;
 
   const templateVars = {
     longURL,
@@ -119,7 +128,7 @@ app.get("/urls/:shortURL", (req, res) => {
 
 //tap the shortURL and bring to the long url page
 app.get("/u/:shortURL", (req, res) => {
-  console.log(urlDatabase);
+  
   const shortURL = req.params.shortURL;
   const longURL = urlDatabase[shortURL]?.longURL;
   if (!longURL) {
@@ -133,7 +142,7 @@ app.get("/u/:shortURL", (req, res) => {
 
 // user register an account
 app.get("/register", (req, res) => {
-  const loggedInUserCookie = req.cookies.user_id;
+  const loggedInUserCookie = req.session.user_id;
   if (loggedInUserCookie) {
     return res.redirect('/urls');
   }
@@ -146,7 +155,7 @@ app.get("/register", (req, res) => {
 
 //User LOGIN page
 app.get("/login", (req, res) => {
- const loggedInUserCookie = req.cookies.user_id;
+ const loggedInUserCookie = req.session.user_id;
 
   const templateVars = {
  
@@ -188,18 +197,15 @@ app.post("/register", (req, res) => {
     email: req.body.email,
     password: hashedPassword
   }
-        console.log(hashedPassword);
-
-  res.cookie('user_id', newUser);
+    req.session.user_id = newUser;
   res.redirect('/urls');
   }
 })
 
 
-
 //add a new url
 app.post("/urls", (req, res) => {
-   const loggedInUserCookie = req.cookies.user_id;
+   const loggedInUserCookie = req.session.user_id;
   if (!loggedInUserCookie) {
     res.status(500);
 
@@ -260,23 +266,19 @@ app.post("/login", (req, res) => {
   })
 
   if (matchedUser !== null) {
-    res.cookie('user_id', matchedUser.id);
+    res.session.user_id = matchedUser.id;
     res.redirect('/urls');  
   } else {
     res.status(403);
     res.send('wrong email or wrong password');
   }
-  
 })
-
 
 //logout the account
 app.post("/logout", (req, res) => {
-  res.clearCookie('user_id');
+  req.session = null;
   res.redirect('/urls')
 })
-
-
 
 
 app.listen(PORT, () => {
