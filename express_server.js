@@ -61,6 +61,10 @@ app.get("/hello", (req, res) => {
 //Main Page, user login
 app.get("/urls", (req, res) => {
   const loggedInUserCookie = req.cookies.user_id
+  if (!loggedInUserCookie) {
+    return res.redirect('/login');
+  }
+
   const dataKeys = Object.keys(urlDatabase);
   const urlsData = dataKeys.map((key) => {
     return {
@@ -70,10 +74,12 @@ app.get("/urls", (req, res) => {
     }
   })
 
-  console.log(urlsData);
+  const specificUserData = urlsData.filter((data) => {
+    return data.userID === loggedInUserCookie;
+  })
 
   const templateVars = {
-    urlsData: urlsData,
+    urlsData: specificUserData,
     email: users[loggedInUserCookie]?.email,
   };
   res.render("urls_index", templateVars);
@@ -83,8 +89,8 @@ app.get("/urls", (req, res) => {
 app.get("/urls/new", (req, res) => {
  const loggedInUserCookie = req.cookies.user_id
   if (!loggedInUserCookie) {
-    res.redirect('/login');
-}
+    return res.redirect('/login');
+  }
   const templateVars = {
     email: users[loggedInUserCookie]?.email,
   };
@@ -94,7 +100,7 @@ app.get("/urls/new", (req, res) => {
 
 app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
-  const longURL = urlDatabase[shortURL];
+  const longURL = urlDatabase[shortURL].longURL;
   
  
   const loggedInUserCookie = req.cookies.user_id;
@@ -110,8 +116,14 @@ app.get("/urls/:shortURL", (req, res) => {
 
 //tap the shortURL and bring to the long url page
 app.get("/u/:shortURL", (req, res) => {
+  console.log(urlDatabase);
   const shortURL = req.params.shortURL;
-  const longURL = urlDatabase[shortURL];
+  const longURL = urlDatabase[shortURL]?.longURL;
+  if (!longURL) {
+    res.status(404);
+    res.send('404 not found');
+    return;
+  }
   res.redirect(longURL);
 });
 
@@ -120,7 +132,7 @@ app.get("/u/:shortURL", (req, res) => {
 app.get("/register", (req, res) => {
   const loggedInUserCookie = req.cookies.user_id;
   if (loggedInUserCookie) {
-    res.redirect('/urls');
+    return res.redirect('/urls');
   }
 
   const templateVars = {
@@ -138,7 +150,7 @@ app.get("/login", (req, res) => {
     email: users[loggedInUserCookie]?.email,
   };
   if (loggedInUserCookie) {
-    res.redirect('/urls')
+    return res.redirect('/urls')
   }
   res.render("login", templateVars);
 });
@@ -163,6 +175,7 @@ app.post("/register", (req, res) => {
   if (req.body.email === '' || req.body.password === '') {
     res.status(400);
     res.send('status: ' + res.statusCode);
+    return;
   } else {
     const newUser = generateRandomString();
   users[newUser] = {
@@ -182,16 +195,28 @@ app.post("/urls", (req, res) => {
    const loggedInUserCookie = req.cookies.user_id;
   if (!loggedInUserCookie) {
     res.status(500);
-    res.send('You must be logged in to make a new url');
+
   }
   const key = generateRandomString();
-  urlDatabase[key] = req.body.longURL;
+  urlDatabase[key] = {
+    longURL: req.body.longURL,
+    userID: loggedInUserCookie
+  }
    res.redirect(`urls/${key}`);        
 });
 
 //Delete a url
 app.post("/urls/:shortURL/delete", (req, res) => {
+  
   const shortURL = req.params.shortURL;
+ if (!urlDatabase[shortURL]) {
+    res.status(404);
+    return res.send('404 not found')
+  }
+  if (loggedInUserCookie !== urlDatabase[shortURL].userID) {
+    res.status(401)
+    return res.send('401 unauthorized')
+  }
   delete urlDatabase[shortURL];
    res.redirect('/urls');
 })
@@ -199,11 +224,16 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 //edit a url
 app.post("/urls/:shortURL/edit", (req, res) => {
   const shortURL = req.params.shortURL;
-  
+  if (!urlDatabase[shortURL]) {
+    res.status(404);
+    return res.send('404 not found')
+  }
+  if (loggedInUserCookie !== urlDatabase[shortURL].userID) {
+    res.status(401)
+    return res.send('401 unauthorized')
+  }
   const longURL = req.body.longURL;
-  console.log(shortURL);
-  console.log(longURL);
-  urlDatabase[shortURL] = longURL;
+  urlDatabase[shortURL].longURL = longURL;
    res.redirect('/urls');
 })
 
