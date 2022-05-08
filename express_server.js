@@ -1,6 +1,6 @@
 const express = require("express");
 const bcrypt = require('bcryptjs');
-
+const getUserByEmail = require('./helpers');
 const app = express();
 const PORT = 8080; 
 
@@ -45,8 +45,6 @@ const bodyParser = require("body-parser");
 
 const cookieSession = require('cookie-session');
 app.use(bodyParser.urlencoded({ extended: true }));
-
-
 app.use(cookieSession({
   name: 'session',
   keys: ['key'],
@@ -54,6 +52,7 @@ app.use(cookieSession({
   // Cookie Options
   maxAge: 24 * 60 * 60 * 1000 // 24 hours
 }))
+
 
 
 //Localhost:8080/
@@ -170,15 +169,9 @@ app.get("/login", (req, res) => {
 //register a new user
 app.post("/register", (req, res) => {
   if (req.body.email) {
-    let alreadyExists = false;
-    Object.keys(users).forEach((key) => {
-      const currentUser = users[key]
-      const currentUserEmail = currentUser.email;
-      if (req.body.email === currentUserEmail) {
-        alreadyExists = true;
-      }
-    })
-    if (alreadyExists) {
+    const databaseUser = getUserByEmail(req.body.email, users);
+    
+    if (databaseUser) {
       res.status(400);
       res.send('User already exists')
       return;
@@ -189,15 +182,16 @@ app.post("/register", (req, res) => {
     res.send('status: ' + res.statusCode);
     return;
   } else {
-    const newUser = generateRandomString();
+    const newUserID = generateRandomString();
     const hashedPassword = bcrypt.hashSync(req.body.password, 10);
 
-  users[newUser] = {
-    id: newUser,
+  users[newUserID] = {
+    id: newUserID,
     email: req.body.email,
     password: hashedPassword
   }
-    req.session.user_id = newUser;
+    req.session.user_id = newUserID;
+
   res.redirect('/urls');
   }
 })
@@ -220,7 +214,8 @@ app.post("/urls", (req, res) => {
 
 //Delete a url
 app.post("/urls/:shortURL/delete", (req, res) => {
-  
+  const loggedInUserCookie = req.session.user_id;
+
   const shortURL = req.params.shortURL;
  if (!urlDatabase[shortURL]) {
     res.status(404);
@@ -236,6 +231,7 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 
 //edit a url
 app.post("/urls/:shortURL/edit", (req, res) => {
+  const loggedInUserCookie = req.session.user_id;
   const shortURL = req.params.shortURL;
   if (!urlDatabase[shortURL]) {
     res.status(404);
@@ -253,20 +249,19 @@ app.post("/urls/:shortURL/edit", (req, res) => {
 //login to a account
 app.post("/login", (req, res) => {
   let matchedUser = null;
-  Object.keys(users).forEach((key) => {
-    const currentUser = users[key];
-    const currentUserEmail = currentUser.email;
-    const currentUserPassword = currentUser.password;
-    
-        if (req.body.email === currentUserEmail) {
-      if (bcrypt.compareSync(req.body.password, currentUserPassword)) {
-        matchedUser = currentUser;
-      }
+  const desiredEmail = req.body.email;
+
+  const databaseUser = getUserByEmail(desiredEmail, users);
+
+  if (databaseUser) {
+    if (bcrypt.compareSync(req.body.password, databaseUser.password)) {
+        matchedUser = databaseUser;
     }
-  })
+  }
+
 
   if (matchedUser !== null) {
-    res.session.user_id = matchedUser.id;
+    req.session.user_id = matchedUser.id;
     res.redirect('/urls');  
   } else {
     res.status(403);
@@ -284,3 +279,4 @@ app.post("/logout", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
+
