@@ -57,6 +57,13 @@ app.use(cookieSession({
 
 //Localhost:8080/
 app.get("/", (req, res) => {
+  const loggedInUserCookie = req.session.user_id;
+   if (loggedInUserCookie) {
+    return res.redirect('/urls');
+   }
+   if (!loggedInUserCookie) {
+    return res.redirect('/login');
+  }
   res.send("Hello!");
 });
 
@@ -112,8 +119,9 @@ app.get("/urls/new", (req, res) => {
 app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
   const longURL = urlDatabase[shortURL].longURL;
-  
- 
+   if (!loggedInUserCookie) {
+    return res.redirect('/login');
+  }
   const loggedInUserCookie = req.session.user_id;
 
   const templateVars = {
@@ -177,9 +185,9 @@ app.post("/register", (req, res) => {
       return;
     }
   }
-  if (req.body.email === '' || req.body.password === '') {
+  if (!req.body.email || !req.body.password) {
     res.status(400);
-    res.send('status: ' + res.statusCode);
+    res.send('email and password required');
     return;
   } else {
     const newUserID = generateRandomString();
