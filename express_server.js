@@ -118,12 +118,13 @@ app.get("/urls/new", (req, res) => {
 
 
 app.get("/urls/:shortURL", (req, res) => {
+  const loggedInUserCookie = req.session.user_id;
   const shortURL = req.params.shortURL;
   const longURL = urlDatabase[shortURL].longURL;
    if (!loggedInUserCookie) {
     return res.redirect('/login');
   }
-  const loggedInUserCookie = req.session.user_id;
+  
 
   const templateVars = {
     longURL,
