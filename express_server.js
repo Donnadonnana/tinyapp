@@ -165,14 +165,13 @@ app.get("/register", (req, res) => {
 //User LOGIN page
 app.get("/login", (req, res) => {
  const loggedInUserCookie = req.session.user_id;
-
-  const templateVars = {
- 
-    email: users[loggedInUserCookie]?.email,
-  };
   if (loggedInUserCookie) {
     return res.redirect('/urls')
   }
+  const templateVars = {
+    email: null,
+  };
+  
   res.render("login", templateVars);
 });
 
