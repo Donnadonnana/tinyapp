@@ -120,12 +120,20 @@ app.get("/urls/new", (req, res) => {
 app.get("/urls/:shortURL", (req, res) => {
   const loggedInUserCookie = req.session.user_id;
   const shortURL = req.params.shortURL;
+  if (!urlDatabase[shortURL]) {
+    res.status(404);
+    return res.send('Not found')
+  }
   const longURL = urlDatabase[shortURL].longURL;
    if (!loggedInUserCookie) {
     return res.redirect('/login');
+   }
+  
+  if (urlDatabase[shortURL].userID !== loggedInUserCookie) {
+    res.status(401);
+    return res.send('No permission')
   }
   
-
   const templateVars = {
     longURL,
     shortURL,
@@ -134,6 +142,7 @@ app.get("/urls/:shortURL", (req, res) => {
   res.render("urls_show", templateVars);
  
 });
+
 
 //tap the shortURL and bring to the long url page
 app.get("/u/:shortURL", (req, res) => {
